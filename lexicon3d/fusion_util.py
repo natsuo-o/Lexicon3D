@@ -86,6 +86,7 @@ def voxelize_pc(pc_pos_aligned, voxel_size=0.05):
 
 def save_fused_feature_with_locs(feat_bank, point_ids, locs_in, n_points, out_dir, scene_id, args):
     '''Save features and locations and aligned voxels.'''
+    print(args)
 
     if n_points < args.n_split_points:
         n_points_cur = n_points  # to handle point cloud numbers less than n_split_points
@@ -93,13 +94,15 @@ def save_fused_feature_with_locs(feat_bank, point_ids, locs_in, n_points, out_di
         n_points_cur = args.n_split_points
 
     rand_ind = np.random.choice(range(n_points), n_points_cur, replace=False)
-
+    print(rand_ind)
+    # n_pointsはpoint cloudの数
     mask_entire = torch.zeros(n_points, dtype=torch.bool)
     mask_entire[rand_ind] = True
     mask = torch.zeros(n_points, dtype=torch.bool)
     mask[point_ids] = True
     mask_entire = mask_entire & mask
 
+    # scan_dir = 'dataset/ScanNet/scans'
     # read in axis alignment matrix
     meta_file = open(os.path.join(args.scan_dir, scene_id, scene_id + '.txt'), 'r').readlines()
     axis_align_matrix = None
@@ -110,7 +113,7 @@ def save_fused_feature_with_locs(feat_bank, point_ids, locs_in, n_points, out_di
         axis_align_matrix = np.array(axis_align_matrix).reshape((4, 4))
     axis_align_matrix = axis_align_matrix if axis_align_matrix is not None else np.eye(4)
 
-    pcd_pos = locs_in[mask_entire]
+    pcd_pos = locs_in[mask_entire] #今回必要なpoint cloudのx,y,z座標を取得
     pcd_pos_4 = np.concatenate([pcd_pos, np.ones((pcd_pos.shape[0], 1))], axis=1)
     pc_pos_aligned = pcd_pos_4 @ axis_align_matrix.transpose()
     pc_pos_aligned = pc_pos_aligned[:, :3]
@@ -133,8 +136,61 @@ def save_fused_feature_with_locs(feat_bank, point_ids, locs_in, n_points, out_di
     print('Scene {} is saved!'.format(scene_id))
 
 
+def save_fused_feature(feat_bank, point_ids, locs_in, n_points, out_dir, scene_id, args):
+    '''Save features and locations and aligned voxels.'''
+
+    if n_points < args.n_split_points:
+        n_points_cur = n_points  # to handle point cloud numbers less than n_split_points
+    else:
+        n_points_cur = args.n_split_points
+
+    rand_ind = np.random.choice(range(n_points), n_points_cur, replace=False)
+    # n_pointsはpoint cloudの数
+    mask_entire = torch.zeros(n_points, dtype=torch.bool)
+    mask_entire[rand_ind] = True
+    mask = torch.zeros(n_points, dtype=torch.bool)
+    mask[point_ids] = True
+    mask_entire = mask_entire & mask
+
+    # scan_dir = 'dataset/ScanNet/scans'
+    # read in axis alignment matrix
+    #meta_file = open(os.path.join(args.scan_dir, scene_id, scene_id + '.txt'), 'r').readlines()
+    axis_align_matrix = None
+    #for line in meta_file:
+    #    if 'axisAlignment' in line:
+    #        axis_align_matrix = [float(x) for x in line.rstrip().strip('axisAlignment = ').split(' ')]
+    #if axis_align_matrix != None:
+    #    axis_align_matrix = np.array(axis_align_matrix).reshape((4, 4))
+    axis_align_matrix = axis_align_matrix if axis_align_matrix is not None else np.eye(4)
+
+    pcd_pos = locs_in[mask_entire] #今回必要なpoint cloudのx,y,z座標を取得
+    # pcd_pos_4 = np.concatenate([pcd_pos, np.ones((pcd_pos.shape[0], 1))], axis=1)
+    #pc_pos_aligned = pcd_pos_4 @ axis_align_matrix.transpose()
+    #pc_pos_aligned = pc_pos_aligned[:, :3]
+    #if pc_pos_aligned.shape[0] != 0:
+    #    pcd_pos_vox = voxelize_pc(pc_pos_aligned, args.voxel_size)
+    #else:
+    #    pcd_pos_vox = np.zeros((0, 3))
+
+    out_dir_features = os.path.join(out_dir, args.prefix+'_features')
+    #out_dir_voxels = os.path.join(out_dir, args.prefix+'_voxels')
+    out_dir_points = os.path.join(out_dir, args.prefix+'_points')
+    os.makedirs(out_dir_features, exist_ok=True)
+    #os.makedirs(out_dir_voxels, exist_ok=True)
+    os.makedirs(out_dir_points, exist_ok=True)
+    torch.save({"feat": feat_bank[mask_entire].half().cpu(),
+                "mask_full": mask_entire
+    },  os.path.join(out_dir_features, scene_id.split('.')[0]+'.pt'))
+    #np.save(os.path.join(out_dir_voxels, scene_id+'.npy'), pcd_pos_vox)
+    np.save(os.path.join(out_dir_points, scene_id.split('.')[0]+'.npy'), pcd_pos)
+    print('Scene {} is saved!'.format(scene_id))
+
+
 
 class PointCloudToImageMapper(object):
+    '''
+    PointCloudToImageMapper クラスは、3Dポイントクラウドの各点を2D画像に投影し、視点や可視性に基づいて、どの点が画像内のどこに映るかを計算する役割を果たします。これにより、3D空間の情報と2D画像のピクセル座標を関連付けることができます。
+    '''
     def __init__(self, image_dim,
             visibility_threshold=0.25, cut_bound=0, intrinsics=None):
         
@@ -153,21 +209,33 @@ class PointCloudToImageMapper(object):
         """
         if self.intrinsics is not None: # global intrinsics
             intrinsic = self.intrinsics
-
+        # 。各ポイントの投影結果を (y, x, mask) の形式で格納するために、形状を (3, N)とする
         mapping = np.zeros((3, coords.shape[0]), dtype=int)
         coords_new = np.concatenate([coords, np.ones([coords.shape[0], 1])], axis=1).T
         assert coords_new.shape[0] == 4, "[!] Shape error"
 
         world_to_camera = np.linalg.inv(camera_to_world)
+        # ワールド座標からカメラ座標への変換
+        # 4, Nに変換
         p = np.matmul(world_to_camera, coords_new)
         p[0] = (p[0] * intrinsic[0][0]) / p[2] + intrinsic[0][2]
         p[1] = (p[1] * intrinsic[1][1]) / p[2] + intrinsic[1][2]
+        #  pi(4,N)
         pi = np.round(p).astype(int) # simply round the projected coordinates
+        # True or False
+        # １行目が、x座標とy座標が画像の左端と上端からcut_bound以上離れて画像内にあるのか、２行目が右側から、３行目が下からcut_bound以上離れて画像内あるのか
         inside_mask = (pi[0] >= self.cut_bound) * (pi[1] >= self.cut_bound) \
                     * (pi[0] < self.image_dim[0]-self.cut_bound) \
                     * (pi[1] < self.image_dim[1]-self.cut_bound)
+        # 遮蔽されていない（他の物体に隠れていないかを判定）
         if depth is not None:
+            # 画像のピクセル座標における深度を指す
             depth_cur = depth[pi[1][inside_mask], pi[0][inside_mask]]
+            # 画像上のピクセル深度と3Dポイントの深度の差を計算
+            # pi[0], pi[1]が指す深度はpoint cloudから計算したx,y座標だから、point cloud同士でx,yは同じだけど、深度は異なっている状態があるよ
+            # よって、画像平面のピクセル座標における深度を指すもの(一番手前のpoint cloud)とx,yは同じだけど、異なる深度を持つpoint cloudと全ての差を計算することで、どのpoint cloudが
+            # 画像平面のピクセル座標を指すpoint cloudなのかを探している
+            # 	self.vis_thres * depth_cur は、あるピクセルで観測された深度からの誤差範囲を表し、その範囲内であれば、3Dポイントが遮蔽されていない（カメラから直接見えている）とみなす
             occlusion_mask = np.abs(depth[pi[1][inside_mask], pi[0][inside_mask]]
                                     - p[2][inside_mask]) <= \
                                     self.vis_thres * depth_cur
@@ -176,6 +244,7 @@ class PointCloudToImageMapper(object):
         else:
             front_mask = p[2]>0 # make sure the depth is in front
             inside_mask = front_mask*inside_mask
+        # 画像内に対応するpoint cloudから変換されたx,yだけ座標が入っている
         mapping[0][inside_mask] = pi[1][inside_mask]
         mapping[1][inside_mask] = pi[0][inside_mask]
         mapping[2][inside_mask] = 1
