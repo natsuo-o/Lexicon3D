@@ -99,7 +99,7 @@ if __name__ == "__main__":
     pca_feat = pca.fit_transform(pc_feat['feat'].numpy())
     pca_feat = (pca_feat - pca_feat.min(axis=0)) / (pca_feat.max(axis=0) - pca_feat.min(axis=0))
     print(pca_feat.shape)
-
+    print(pc_pos.shape)
 
     # ポイントクラウドの作成
     pcd = o3d.geometry.PointCloud()

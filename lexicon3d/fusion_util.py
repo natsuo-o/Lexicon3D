@@ -215,6 +215,7 @@ class PointCloudToImageMapper(object):
         assert coords_new.shape[0] == 4, "[!] Shape error"
 
         world_to_camera = np.linalg.inv(camera_to_world)
+        
         # ワールド座標からカメラ座標への変換
         # 4, Nに変換
         p = np.matmul(world_to_camera, coords_new)
@@ -227,10 +228,18 @@ class PointCloudToImageMapper(object):
         inside_mask = (pi[0] >= self.cut_bound) * (pi[1] >= self.cut_bound) \
                     * (pi[0] < self.image_dim[0]-self.cut_bound) \
                     * (pi[1] < self.image_dim[1]-self.cut_bound)
+        #print(inside_mask)
+        #print(inside_mask.sum())
         # 遮蔽されていない（他の物体に隠れていないかを判定）
         if depth is not None:
             # 画像のピクセル座標における深度を指す
+            #print(depth)
+            #print(depth.shape)
             depth_cur = depth[pi[1][inside_mask], pi[0][inside_mask]]
+            #print(depth_cur)
+            #print(p[2][inside_mask])
+            #print(depth_cur - p[2][inside_mask])
+            #c
             # 画像上のピクセル深度と3Dポイントの深度の差を計算
             # pi[0], pi[1]が指す深度はpoint cloudから計算したx,y座標だから、point cloud同士でx,yは同じだけど、深度は異なっている状態があるよ
             # よって、画像平面のピクセル座標における深度を指すもの(一番手前のpoint cloud)とx,yは同じだけど、異なる深度を持つpoint cloudと全ての差を計算することで、どのpoint cloudが
