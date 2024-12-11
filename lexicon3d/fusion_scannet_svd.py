@@ -198,7 +198,7 @@ def main(args):
             print('skip ', i, data_paths[i])
             continue
 
-        process_one_scene(data_paths[i], out_dir, args)
+        process_one_scene(data_paths[1], out_dir, args)
 
 if __name__ == "__main__":
     args = get_args()

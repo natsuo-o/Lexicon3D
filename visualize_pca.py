@@ -47,11 +47,14 @@ if __name__ == "__main__":
         description='Multi-view feature fusion of DINOv2 on ScanNet.')
     parser.add_argument('--pc_path', type=str, help='/workspace/data/processed/replica_processed/lexicon3d/dinov2/dinov2_points/office0.npy')
     parser.add_argument('--feat_path', type=str, help='/workspace/data/processed/replica_processed/lexicon3d/dinov2/dinov2_features/office0.pt')
-    parser.add_argument('--output_dir', type=str, help='/workspace/data/processed/replica_processed/replica_3d/train/')
+    parser.add_argument('--output_dir', type=str, help='/workspace/data/processed/replica_processed/replica_3d/train/dinov2')
 
     # Hyper parameters
     parser.add_argument('--hparams', default=[], nargs="+")
     args = parser.parse_args()
+
+    if not os.path.isdir(args.output_dir):
+        os.makedirs(args.output_dir, exist_ok=False)
 
     pc_dir = 'lexicon3d/dataset/lexicon3d/dinov2/dinov2_points'
     feat_dir = 'lexicon3d/dataset/lexicon3d/dinov2/dinov2_features'
@@ -110,7 +113,7 @@ if __name__ == "__main__":
     # plyファイルに保存
     # output_path = "output.ply"
     output_file_name = args.feat_path.split('/')[-1].split('.')[0] + '_pca.ply'
-    output_path = args.output_dir + output_file_name
+    output_path = args.output_dir + '/' +output_file_name
     print(output_path)
     o3d.io.write_point_cloud(output_path, pcd, write_ascii=True)
     print(f"Point cloud saved to {output_path}")

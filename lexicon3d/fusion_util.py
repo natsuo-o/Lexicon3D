@@ -219,6 +219,7 @@ class PointCloudToImageMapper(object):
         # ワールド座標からカメラ座標への変換
         # 4, Nに変換
         p = np.matmul(world_to_camera, coords_new)
+        # カメラ座標系から画像座標系に変換
         p[0] = (p[0] * intrinsic[0][0]) / p[2] + intrinsic[0][2]
         p[1] = (p[1] * intrinsic[1][1]) / p[2] + intrinsic[1][2]
         #  pi(4,N)

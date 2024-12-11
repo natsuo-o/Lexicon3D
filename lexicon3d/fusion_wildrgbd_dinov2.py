@@ -111,6 +111,7 @@ def process_one_scene(data_path, out_dir, args):
         image = Image.fromarray(image_array)
         image = transform(image).unsqueeze(0).to('cuda')
         with torch.no_grad():
+            
             # パッチレベルで正規化された特徴量にアクセスする, 'x_norm_clstoken'とx_norm_patchtokensから成り立っている
             feat_2d = evaluator.forward_features(image)["x_norm_patchtokens"] # 1バッチ数, 391(26*46)パッチ数, 1024
 
@@ -228,7 +229,6 @@ def main(args):
 
     ###############################
     #### load the DINOv2 model ####
-
     model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14').cuda() # 238, 322 --> 17, 23
     args.evaluator = model
 

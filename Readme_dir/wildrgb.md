@@ -23,9 +23,9 @@
 ### PCAを用いた可視化
 8. cd 'workspace'に移動する
 9. 以下を実行する
-    - `python3 visualize_pca.py --pc_path /workspace/data/processed/wildrgbd_processed/lexicon3d/dinov2/dinov2_points/scene_088.npy --feat_path /workspace/data/processed/wildrgbd_processed/lexicon3d/dinov2/dinov2_features/scene_088.pt --output_dir /workspace/data/processed/wildrgbd_processed/cars/replica_3d/train/`
+    - `python3 visualize_pca.py --pc_path /workspace/data/processed/wildrgbd_processed/lexicon3d/dinov2/dinov2_points/scene_088.npy --feat_path /workspace/data/processed/wildrgbd_processed/lexicon3d/dinov2/dinov2_features/scene_088.pt --output_dir /workspace/data/processed/wildrgbd_processed/cars/replica_3d/train/dinov2`
     - `scene_088.npy`のように7.で作成したファイルをパスで指定する
-    - `workspace/data/processed/wildrgbd_processed/cars/replica_3d/train/`に`scene_088_pca.ply`という名前で保存される
+    - `workspace/data/processed/wildrgbd_processed/cars/replica_3d/train/dinov2`に`scene_088_pca.ply`という名前で保存される
 
 
 

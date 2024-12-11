@@ -101,8 +101,11 @@ def process_one_scene(data_path, out_dir, args):
         image = Image.open(img_dir).convert('RGB')
         image = transform(image).unsqueeze(0).to('cuda')
         with torch.no_grad():
+            cls_feat_2d = evaluator.forward_features(image)
+            feat_2d = cls_feat_2d[:, 1:,:]
+
             # パッチレベルで正規化された特徴量にアクセスする, 'x_norm_clstoken'とx_norm_patchtokensから成り立っている
-            feat_2d = evaluator.forward_features(image)["x_norm_patchtokens"] # 1(バッチサイズ), 391(26*46)パッチ数, 1024
+            #feat_2d = evaluator.forward_features(image)["x_norm_patchtokens"] # 1(バッチサイズ), 391(26*46)パッチ数, 1024
 
         feat_2d = feat_2d.squeeze(0).permute(1, 0).view(-1, args.n_patch[1], args.n_patch[0])
         # resize the feat_2d from 17x23 to 240x320
@@ -130,7 +133,7 @@ def process_one_scene(data_path, out_dir, args):
 
         # mapping[:,1]はshapeがN それぞれのpoint cloudの画像座標面上でのx座標を指す
         # feat_2dはそれぞれのピクセルに特徴量が格納されている
-        # feat_2d_3d:N,1024になる。それぞれのpoint cloudにおける特徴量を計算する
+        # feat_2d_3d:N,1024になる。　それぞれのpoint cloudにおける特徴量を計算する
         #print(feat_2d.shape)
         '''
         
@@ -185,7 +188,7 @@ def main(args):
     data_root_2d = join(data_dir,'replica_2d')
     args.data_root_2d = data_root_2d
     out_dir = args.output_dir
-    args.feat_dim = 1024 # 1024 # 512 CLIP feature dimension, 768/1024 DINOv2 feature dimension
+    args.feat_dim = 768 # 1024 # 512 CLIP feature dimension, 768/1024 DINOv2 feature dimension
     os.makedirs(out_dir, exist_ok=True)
     process_id_range = args.process_id_range
 
@@ -198,7 +201,8 @@ def main(args):
     ###############################
     #### load the DINOv2 model ####
 
-    model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14').cuda() # 238, 322 --> 17, 23
+    #model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14').cuda() # 238, 322 --> 17, 23
+    model = torch.hub.load("ywyue/FiT3D", "dinov2_base_fine").eval().to(torch.float32).to('cuda')
     args.evaluator = model
 
 
